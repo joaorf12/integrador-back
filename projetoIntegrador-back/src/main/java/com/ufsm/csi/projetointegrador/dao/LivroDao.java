@@ -51,21 +51,19 @@ public class LivroDao {
 
   public Livro excluirLivro(Livro livro) {
     try (Connection connection = new ConectaDBPostgres().getConexao()) {
-      File capa = new File(caminhoCapa+livro.getCapa());
-      capa.delete();
-      File pdf = new File(caminhoPdf+livro.getPdf());
-      pdf.delete();
-
       this.sql = "DELETE FROM livro WHERE id=?";
       this.preparedStatement = connection.prepareStatement(sql);
       this.preparedStatement.setInt(1, livro.getId());
       this.preparedStatement.execute();
 
+      File capa = new File(caminhoCapa+livro.getCapa());
+      capa.delete();
+      File pdf = new File(caminhoPdf+livro.getPdf());
+      pdf.delete();
     } catch (PSQLException e) {
-      e.printStackTrace();
-      status = "O livro está vinculado a um processo!";
+      return null;
     } catch (SQLException e) {
-      e.printStackTrace();
+      return null;
     }
     return livro;
   }
@@ -85,7 +83,6 @@ public class LivroDao {
       this.preparedStatement.setInt(7, livro.getId());
       this.preparedStatement.executeUpdate();
 
-      System.out.println(livro.getOld_pdf());
       if(livro.getOld_pdf() != null || livro.getOld_capa() != null){
         if(livro.getOld_capa() != null) {
           File capa = new File(caminhoCapa+livro.getOld_capa());
@@ -157,7 +154,7 @@ public class LivroDao {
     return livro;
   }
 
-  public ArrayList<Livro> getLivros() {
+  public ArrayList<Livro> getLivros(int id_pessoa) {
     ArrayList<Livro> livros = new ArrayList<>();
     try (Connection connection = new ConectaDBPostgres().getConexao()) {
       this.sql = "select * from livro order by id;";
@@ -179,11 +176,22 @@ public class LivroDao {
         livro.setNum_download(this.resultSet.getInt("num_download"));
         livro.setCapa(this.resultSet.getString("capa"));
         livro.setPdf(this.resultSet.getString("pdf"));
+
         livros.add(livro);
+      }
+      for ( Livro livro : livros ){
+        this.sql = "select status from prateleira_livro pl, prateleira p where pl.id_livro = ? and pl.id_prateleira = p.id and p.id_pessoa = ?;";
+        this.preparedStatement = connection.prepareStatement(sql);
+        this.preparedStatement.setInt(1, livro.getId());
+        this.preparedStatement.setInt(2, id_pessoa);
+        this.resultSet = this.preparedStatement.executeQuery();
+
+        while (this.resultSet.next()) {
+          livro.setStatus(this.resultSet.getString("status"));
+        }
       }
 
     } catch (SQLException e) {
-      e.printStackTrace();
       this.status = "error";
     }
     return livros;
@@ -193,9 +201,6 @@ public class LivroDao {
     ArrayList<Livro> livros = new ArrayList<>();
     try (Connection connection = new ConectaDBPostgres().getConexao()) {
       this.sql = "select * from livro where id_pessoa = ? order by id;";
-      /*this.stmt = connection.createStatement();
-      this.stmt.setInt(1, id);
-      this.resultSet = this.stmt.executeQuery(sql);*/
       this.preparedStatement = connection.prepareStatement(sql);
       this.preparedStatement.setInt(1, id);
       this.resultSet = this.preparedStatement.executeQuery();
@@ -223,6 +228,79 @@ public class LivroDao {
       this.status = "error";
     }
     return livros;
+  }
+
+  public ArrayList<Livro> getTheyLivros(int id_livroPessoa, int id_pessoa) {
+    ArrayList<Livro> livros = new ArrayList<>();
+    try (Connection connection = new ConectaDBPostgres().getConexao()) {
+      this.sql = "select l.id,\n" +
+        "        l.nome,\n" +
+        "        l.autor,\n" +
+        "        l.ano_publi,\n" +
+        "        l.num_pag,\n" +
+        "        l.genero,\n" +
+        "        l.id_pessoa,\n" +
+        "        l.dt_ult_atualizacao,\n" +
+        "        l.num_download,\n" +
+        "        l.capa,\n" +
+        "       \tl.pdf\n" +
+        "\t\tfrom livro l\n" +
+        "\t\twhere l.id_pessoa = ? order by id;";
+      this.preparedStatement = connection.prepareStatement(sql);
+      this.preparedStatement.setInt(1, id_livroPessoa);
+      this.resultSet = this.preparedStatement.executeQuery();
+
+      while (this.resultSet.next()) {
+        Livro livro = new Livro();
+        Usuario usuario = new Usuario();
+        livro.setUsuario(usuario);
+        livro.setId(this.resultSet.getInt("id"));
+        livro.setNome(this.resultSet.getString("nome"));
+        livro.setAno_publi(this.resultSet.getInt("ano_publi"));
+        livro.setNum_pag(this.resultSet.getInt("num_pag"));
+        livro.setAutor(this.resultSet.getString("autor"));
+        livro.setGenero(this.resultSet.getString("genero"));
+        livro.getUsuario().setId(this.resultSet.getInt("id_pessoa"));
+        livro.setDt_ult_atualizacao(this.resultSet.getDate("dt_ult_atualizacao"));
+        livro.setNum_download(this.resultSet.getInt("num_download"));
+        livro.setCapa(this.resultSet.getString("capa"));
+        livro.setPdf(this.resultSet.getString("pdf"));
+        livros.add(livro);
+      }
+
+      for ( Livro livro : livros ){
+        this.sql = "select status from prateleira_livro pl, prateleira p where pl.id_livro = ? and pl.id_prateleira = p.id and p.id_pessoa = ?;";
+        this.preparedStatement = connection.prepareStatement(sql);
+        this.preparedStatement.setInt(1, livro.getId());
+        this.preparedStatement.setInt(2, id_pessoa);
+        this.resultSet = this.preparedStatement.executeQuery();
+
+        while (this.resultSet.next()) {
+          livro.setStatus(this.resultSet.getString("status"));
+        }
+      }
+
+    } catch (SQLException e) {
+      e.printStackTrace();
+      this.status = "error";
+    }
+    return livros;
+  }
+
+  public int aumentaDownload (int id) {
+    try (Connection connection = new ConectaDBPostgres().getConexao()) {
+      this.sql = "update livro set num_download = num_download + 1 where id = ?";
+      this.preparedStatement = connection.prepareStatement(sql);
+      this.preparedStatement.setInt(1, id);
+      this.preparedStatement.executeUpdate();
+
+      if (this.preparedStatement.getUpdateCount() > 0) {
+        return 1;
+      }
+    } catch (SQLException e) {
+      return 0;
+    }
+    return 1;
   }
 
   public String renomaerArquivo(String arquivo, int idLivro, boolean isCapa) {

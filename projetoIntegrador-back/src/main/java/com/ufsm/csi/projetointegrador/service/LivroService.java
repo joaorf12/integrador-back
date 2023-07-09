@@ -13,8 +13,8 @@ public class LivroService {
     return dao.setLivro(livro);
   }
 
-  public ArrayList<Livro> getLivros() {
-    return dao.getLivros();
+  public ArrayList<Livro> getLivros(int id) {
+    return dao.getLivros(id);
   }
 
   public ArrayList<Livro> getMyLivros(int id) {

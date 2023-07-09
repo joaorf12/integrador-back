@@ -9,6 +9,15 @@ public class Usuario {
     private boolean ativo;
     private String token;
     private String foto;
+    private String oldFoto;
+
+  public String getOldFoto() {
+    return oldFoto;
+  }
+
+  public void setOldFoto(String oldFoto) {
+    this.oldFoto = oldFoto;
+  }
 
   public String getFoto() {
     return foto;

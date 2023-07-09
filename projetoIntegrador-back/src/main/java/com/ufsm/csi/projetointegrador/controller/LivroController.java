@@ -1,9 +1,10 @@
 package com.ufsm.csi.projetointegrador.controller;
 
+import com.ufsm.csi.projetointegrador.dao.AvaliacaoDao;
 import com.ufsm.csi.projetointegrador.dao.ComentarioDao;
 import com.ufsm.csi.projetointegrador.dao.LivroDao;
-import com.ufsm.csi.projetointegrador.model.Comentario;
-import com.ufsm.csi.projetointegrador.model.Livro;
+import com.ufsm.csi.projetointegrador.dao.PrateleiraDao;
+import com.ufsm.csi.projetointegrador.model.*;
 import com.ufsm.csi.projetointegrador.service.LivroService;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -25,14 +26,19 @@ public class LivroController {
   private static String caminhoImagens = "C:\\Users\\User\\Desktop\\ProjetoIntegrador2404\\ProjetoIntegrador\\projetoIntegrador-front\\src\\assets\\img\\";
   private static String caminhoPDF = "C:\\Users\\User\\Desktop\\ProjetoIntegrador2404\\ProjetoIntegrador\\pdfs\\";
 
-  @GetMapping("/livros")
-  public ArrayList<Livro> getLivros() {
-    return new LivroService().getLivros();
+  @GetMapping("/livros/{id}")
+  public ArrayList<Livro> getLivros(@PathVariable("id") int id) {
+    return new LivroService().getLivros(id);
   }
 
-  @GetMapping("/livros/{id}")
+  @GetMapping("/livros/myLivros/{id}")
   public ArrayList<Livro> getMyLivros(@PathVariable("id") int id) {
     return new LivroService().getMyLivros(id);
+  }
+
+  @GetMapping("/livros/visitar/{id_livroPessoa}/{id_pessoa}")
+  public ArrayList<Livro> getTheyLivros(@PathVariable("id_livroPessoa") int id_livroPessoa, @PathVariable("id_pessoa") int id_pessoa) {
+    return new LivroDao().getTheyLivros(id_livroPessoa, id_pessoa);
   }
 
   @GetMapping("/buscar/{id}")
@@ -80,8 +86,32 @@ public class LivroController {
     return pdf.getOriginalFilename();
   }
 
+  @GetMapping("/download/{pdf}/{id_livro}/{id_pessoa}")
+  public HttpEntity<byte[]> downloadLivro(@PathVariable("pdf") String pdf, @PathVariable("id_livro") int id_livro, @PathVariable("id_pessoa") int id_pessoa) throws IOException {
+    byte[] arquivo = Files.readAllBytes( Paths.get(caminhoPDF+pdf) );
+
+    HttpHeaders httpHeaders = new HttpHeaders();
+
+    httpHeaders.add("Content-Disposition", "attachment;filename=\"pdf-livro.pdf\"");
+
+    HttpEntity<byte[]> entity = new HttpEntity<byte[]>( arquivo, httpHeaders);
+
+    PrateleiraLivro pl = new PrateleiraLivro();
+    pl.setId_livro(id_livro);
+    pl.setId_pessoa(id_pessoa);
+    try {
+      new PrateleiraDao().setLivroLendo(pl);
+    } catch (SQLException e) {
+      throw new RuntimeException(e);
+    }
+
+    new LivroDao().aumentaDownload(id_livro);
+
+    return entity;
+  }
+
   @GetMapping("/download/{pdf}")
-  public HttpEntity<byte[]> downloadLivro(@PathVariable("pdf") String pdf/*@RequestParam String pdf*/) throws IOException {
+  public HttpEntity<byte[]> downloadMyLivros(@PathVariable("pdf") String pdf) throws IOException {
     byte[] arquivo = Files.readAllBytes( Paths.get(caminhoPDF+pdf) );
 
     HttpHeaders httpHeaders = new HttpHeaders();
@@ -93,9 +123,9 @@ public class LivroController {
     return entity;
   }
 
+
   @PostMapping("/delete")
   public Livro deleteLivro(@RequestBody Livro livro) {
-
     return new LivroService().excluiLivro(livro);
   }
 
@@ -118,6 +148,17 @@ public class LivroController {
   @GetMapping("/comentario/{id}")
   public ArrayList<Comentario> getComentarios(@PathVariable("id") int id_livro) {
     return new ComentarioDao().getComentarios(id_livro);
+  }
+
+  //AVALIAÇÃO
+  @PostMapping("/avaliacao")
+  public int avaliarLivro(@RequestBody ObjAvaliacao objAvaliacao) {
+    return new AvaliacaoDao().setAvaliacao(objAvaliacao);
+  }
+
+  @GetMapping("/avaliacao/{id}")
+  public ArrayList<ObjAvaliacao> getAvaliacao(@PathVariable("id") int id_livro) {
+    return new AvaliacaoDao().getAvaliacoes(id_livro);
   }
 
     /*@GetMapping("/getPdf")

@@ -63,24 +63,38 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
       .antMatchers(HttpMethod.POST, "/livro/capa").hasAnyAuthority("USER", "ADMIN")
       .antMatchers(HttpMethod.POST, "/livro/pdf").hasAnyAuthority("USER", "ADMIN")
       .antMatchers(HttpMethod.GET, "/livro/livros/{id}").hasAnyAuthority("USER", "ADMIN")
+      .antMatchers(HttpMethod.GET, "/livro/livros/myLivros/{id}").hasAnyAuthority("USER", "ADMIN")
+      .antMatchers(HttpMethod.GET, "/livro/livros/visitar/{id_livroPessoa}/{id_pessoa}").hasAnyAuthority("USER", "ADMIN")
+      .antMatchers(HttpMethod.GET, "/livro/download/{pdf}/{id_livro}/{id_pessoa}").hasAnyAuthority("USER", "ADMIN")
       .antMatchers(HttpMethod.GET, "/livro/download/{pdf}").hasAnyAuthority("USER", "ADMIN")
       .antMatchers(HttpMethod.GET, "/livro/buscar/{id}").hasAnyAuthority("USER", "ADMIN")
       .antMatchers(HttpMethod.POST, "/livro/delete").hasAnyAuthority("USER", "ADMIN")
       .antMatchers(HttpMethod.POST, "/livro/editar").hasAnyAuthority("USER", "ADMIN")
       .antMatchers(HttpMethod.POST, "/livro/save").hasAnyAuthority("USER", "ADMIN")
+      //AVALIAÇÃO
+      .antMatchers(HttpMethod.POST, "/livro/avaliacao").hasAnyAuthority("USER", "ADMIN")
+      .antMatchers(HttpMethod.GET, "/livro/avaliacao/{id}").hasAnyAuthority("USER", "ADMIN")
       //COMENTARIO
       .antMatchers(HttpMethod.POST, "/livro/comentario/save").hasAnyAuthority("USER", "ADMIN")
       .antMatchers(HttpMethod.GET, "/livro/comentario/{id}").hasAnyAuthority("USER", "ADMIN")
       .antMatchers(HttpMethod.GET, "/livro/comentario/delete/{id}").hasAnyAuthority("USER", "ADMIN")
+      //PRATELEIRA
+      .antMatchers(HttpMethod.GET, "/prateleira/livros/{id}").hasAnyAuthority("USER", "ADMIN")
+      .antMatchers(HttpMethod.POST, "/prateleira/delete").hasAnyAuthority("USER", "ADMIN")
+      .antMatchers(HttpMethod.POST, "/prateleira/interesse").hasAnyAuthority("USER", "ADMIN")
+      .antMatchers(HttpMethod.POST, "/prateleira/lido").hasAnyAuthority("USER", "ADMIN")
       //EMPRESTIMO - parte velha
       .antMatchers(HttpMethod.GET, "/emprestimo/emprestimos").hasAnyAuthority("USER", "ADMIN")
       .antMatchers(HttpMethod.POST, "/emprestimo/save").hasAnyAuthority("ADMIN")
       .antMatchers(HttpMethod.GET, "/emprestimo/devolver/{id_emp}/{id_liv}").hasAnyAuthority("USER", "ADMIN")
       .antMatchers(HttpMethod.GET, "/emprestimo/emprestimos/{id_user}").hasAnyAuthority("USER")
       //USUARIO
-      .antMatchers(HttpMethod.GET, "/usuario/delete/{id}").hasAnyAuthority("ADMIN")
-      .antMatchers(HttpMethod.POST, "/usuario/editar").hasAnyAuthority("ADMIN")
-      .antMatchers(HttpMethod.GET, "/usuario/usuarios").hasAnyAuthority("ADMIN")
+      .antMatchers(HttpMethod.GET, "/usuario/delete/{id}").hasAnyAuthority("USER", "ADMIN")
+      .antMatchers(HttpMethod.POST, "/usuario/editar").hasAnyAuthority("USER", "ADMIN")
+      .antMatchers(HttpMethod.POST, "/usuario/foto").hasAnyAuthority("USER", "ADMIN")
+      .antMatchers(HttpMethod.POST, "/usuario/senha").hasAnyAuthority("USER", "ADMIN")
+      .antMatchers(HttpMethod.POST, "/usuario/desativar").hasAnyAuthority("USER", "ADMIN")
+      .antMatchers(HttpMethod.GET, "/usuario/usuarios/{id}").hasAnyAuthority("USER", "ADMIN")
 
       .anyRequest()
       .denyAll();

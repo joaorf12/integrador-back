@@ -1,10 +1,12 @@
 package com.ufsm.csi.projetointegrador.dao;
 
 import com.ufsm.csi.projetointegrador.model.Permissao;
+import com.ufsm.csi.projetointegrador.model.Senha;
 import com.ufsm.csi.projetointegrador.model.Usuario;
 import org.postgresql.util.PSQLException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import java.io.File;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -15,6 +17,8 @@ public class UsuarioDao {
   private ResultSet resultSet;
   private Statement stmt;
   private String status;
+
+  private static final String caminhoFoto = "C:\\Users\\User\\Desktop\\ProjetoIntegrador2404\\ProjetoIntegrador\\projetoIntegrador-front\\src\\assets\\img\\";
 
   public String desAtivarUsuario(Usuario usuario) {
     try (Connection connection = new ConectaDBPostgres().getConexao()) {
@@ -41,12 +45,15 @@ public class UsuarioDao {
     return status = "Usuario desativado!";
   }
 
-  public ArrayList<Usuario> getUsuarios() {
+  public ArrayList<Usuario> getUsuarios(int id) {
     ArrayList<Usuario> usuarios = new ArrayList<>();
     try (Connection connection = new ConectaDBPostgres().getConexao()) {
-      this.sql = "SELECT pessoa.id, pessoa.id_permissao, pessoa.nome, pessoa.email, pessoa.foto, senha, ativo, p.nome as nome_permissao FROM Pessoa left join permissao p on id_permissao = p.id;";
-      this.stmt = connection.createStatement();
-      this.resultSet = this.stmt.executeQuery(sql);
+      this.sql = "SELECT pessoa.id, pessoa.id_permissao, pessoa.nome, pessoa.email, pessoa.foto, senha, ativo, p.nome as nome_permissao FROM Pessoa \n" +
+        "left join permissao p on id_permissao = p.id\n" +
+        "where pessoa.ativo = true  and pessoa.id != ?;";
+      this.preparedStatement = connection.prepareStatement(this.sql);
+      this.preparedStatement.setInt(1, id);
+      this.resultSet = this.preparedStatement.executeQuery();
 
       while (this.resultSet.next()) {
         Usuario usuario = new Usuario();
@@ -74,7 +81,7 @@ public class UsuarioDao {
 
     try (Connection connection = new ConectaDBPostgres().getConexao()) {
 
-      this.sql = "SELECT pessoa.id, pessoa.id_permissao, pessoa.nome, pessoa.email, pessoa.foto, senha, ativo, p.nome as nome_permissao  FROM Pessoa, permissao p WHERE email= ? and pessoa.id_permissao = p.id;";
+      this.sql = "SELECT pessoa.id, pessoa.id_permissao, pessoa.nome, pessoa.email, pessoa.foto, senha, ativo, p.nome as nome_permissao  FROM Pessoa, permissao p WHERE email= ? and pessoa.id_permissao = p.id and pessoa.ativo = true;";
       this.preparedStatement = connection.prepareStatement(this.sql);
       this.preparedStatement.setString(1, email);
       this.resultSet = this.preparedStatement.executeQuery();
@@ -147,21 +154,51 @@ public class UsuarioDao {
     return usuario;
   }
 
-  public String editarUsuario(Usuario usuario) {
+  public Usuario editarUsuario(Usuario usuario) {
     try (Connection connection = new ConectaDBPostgres().getConexao()) {
-      this.sql = "UPDATE usuario SET nome=?, email=?, senha=? WHERE id= ?";
+      this.sql = "UPDATE pessoa SET nome=?, email=? WHERE id= ?";
       this.preparedStatement = connection.prepareStatement(sql);
       this.preparedStatement.setString(1, usuario.getNome());
       this.preparedStatement.setString(2, usuario.getEmail());
-      this.preparedStatement.setString(3, usuario.getSenha());
-      this.preparedStatement.setInt(4, usuario.getId());
+      this.preparedStatement.setInt(3, usuario.getId());
       this.preparedStatement.executeUpdate();
+
+      if(usuario.getOldFoto() != null){
+        if(usuario.getOldFoto() != null) {
+          File foto = new File(caminhoFoto+usuario.getOldFoto());
+          foto.delete();
+          usuario.setFoto(renomaerArquivo(usuario.getFoto(), usuario.getId()));
+        }
+
+        this.sql = "UPDATE pessoa SET foto=? WHERE id= ?";
+        this.preparedStatement = connection.prepareStatement(sql);
+        this.preparedStatement.setString(1, usuario.getFoto());
+        this.preparedStatement.setInt(2, usuario.getId());
+        this.preparedStatement.executeUpdate();
+      }
+
       if (this.preparedStatement.getUpdateCount() > 0) {
         this.status = "Editado com Sucesso";
       }
 
     } catch (SQLException e) {
       e.printStackTrace();
+    }
+
+    return usuario;
+  }
+
+  public String desativarUsuario(int id) {
+    try (Connection connection = new ConectaDBPostgres().getConexao()) {
+      this.sql = "UPDATE usuario SET ativo= false WHERE id= ?";
+      this.preparedStatement = connection.prepareStatement(sql);
+      this.preparedStatement.setInt(1, id);
+      this.preparedStatement.executeUpdate();
+      if (this.preparedStatement.getUpdateCount() > 0) {
+        this.status = "desativado com Sucesso";
+      }
+    } catch (SQLException e) {
+      this.status = "erro ao desativar";
     }
 
     return this.status;
@@ -176,5 +213,48 @@ public class UsuarioDao {
     } else {
       return null;
     }
+  }
+
+  public int editarSenha(Senha senha) {
+    try (Connection connection = new ConectaDBPostgres().getConexao()) {
+
+      Usuario usuario = getUsuarioById(senha.getId_usuario());
+      if (usuario.getSenha().equals(senha.getOldSenha())) {
+        this.sql = "UPDATE pessoa SET senha=? WHERE id= ?";
+        this.preparedStatement = connection.prepareStatement(sql);
+        this.preparedStatement.setString(1, senha.getNewSenha());
+        this.preparedStatement.setInt(2, senha.getId_usuario());
+        this.preparedStatement.executeUpdate();
+
+        if (this.preparedStatement.getUpdateCount() > 0) {
+          this.status = "Editado com Sucesso";
+        }
+        return 1;
+      }
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+
+    return 0;
+  }
+
+  public String renomaerArquivo(String arquivo, int idPessoa) {
+
+    String caminho;
+    String tipo = "";
+    caminho = caminhoFoto;
+    File oldName =
+      new File(caminho + arquivo);
+    File newName = null;
+    String[] trataTipo = oldName.getName().split("\\.");
+    tipo = trataTipo[trataTipo.length - 1];
+
+    newName = new File(caminho + "usuario" + idPessoa + "." + tipo);
+
+    if (oldName.renameTo(newName))
+      System.out.println("Renamed successfully");
+    else
+      System.out.println("Error");
+    return "usuario" + idPessoa + "." + tipo;
   }
 }
